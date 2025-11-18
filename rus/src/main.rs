@@ -1,4 +1,5 @@
 use rusqlite::{params, Connection, Result};
+use std::path::Path;
 
 //Printer Errors ud
 fn main() {
@@ -53,7 +54,15 @@ fn run() -> Result<()> {
 
 //Opretter database tabel og indsætter nogle værdier
 fn lav_lektier() -> Result<()> {
-    let conn = Connection::open("lektier.sqlite")?;
+    let db_path = "lektier.sqlite";
+    let file_exists = Path::new(db_path).exists();
+
+    let conn = Connection::open(db_path)?;
+    
+    if !file_exists {
+        println!("Database fil oprettet: {}", db_path);
+    }
+
     conn.execute(
         "CREATE TABLE IF NOT EXISTS lektier (
             id INTEGER PRIMARY KEY,
@@ -64,22 +73,31 @@ fn lav_lektier() -> Result<()> {
         )",
         [],
     )?;
+
+    // Only insert data if table was just created (check row count)
+    let mut stmt = conn.prepare("SELECT COUNT(*) FROM lektier")?;
+    let count: i32 = stmt.query_row([], |row| row.get(0))?;
+
+    if count == 0 {
         let data = vec![
-        ("Alice", "2.a", 2, 15),
-        ("Bob", "2.b", 1, 10),
-        ("Charlie", "2.c", 3, 20),
-        ("Diana", "2.d", 2, 5),
-        ("Eve", "2.e", 4, 30),
-        ("Frank", "2.f", 1, 0),
-        ("Grace", "2.g", 2, 25),
-    ];
-    for (navn, klasse, fravor, kommet) in data {
-        conn.execute(
-        "INSERT INTO lektier (navn, klasse, fravor, kommet) VALUES (?1, ?2, ?3, ?4)",
-        params![navn, klasse, fravor, kommet],
-        )?;
+            ("Alice", "2.a", 2, 15),
+            ("Bob", "2.b", 1, 10),
+            ("Charlie", "2.c", 3, 20),
+            ("Diana", "2.d", 2, 5),
+            ("Eve", "2.e", 4, 30),
+            ("Frank", "2.f", 1, 0),
+            ("Grace", "2.g", 2, 25),
+        ];
+        for (navn, klasse, fravor, kommet) in data {
+            conn.execute(
+                "INSERT INTO lektier (navn, klasse, fravor, kommet) VALUES (?1, ?2, ?3, ?4)",
+                params![navn, klasse, fravor, kommet],
+            )?;
+        }
+        println!("Lektier database oprettet med standarddata");
+    } else {
+        println!("Lektier database findes allerede");
     }
-    println!("Lektier database oprettet");
     Ok(())
 }
 
